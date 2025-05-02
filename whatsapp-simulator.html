@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WhatsApp JSON Message Simulator</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #111b21;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .phone-frame {
+      width: 390px;
+      height: 844px;
+      background: #ece5dd;
+      border-radius: 40px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.5);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border: 2px solid #000;
+      resize: both;
+      overflow: hidden;
+    }
+    .header {
+      background: #075e54;
+      color: white;
+      padding: 15px;
+      font-weight: bold;
+      text-align: center;
+    }
+    .chat-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 15px;
+      overflow-y: auto;
+      flex-grow: 1;
+      max-height: 100%;
+    }
+    .chat {
+      background: #dcf8c6;
+      padding: 10px 15px;
+      border-radius: 7.5px;
+      margin: 8px 0;
+      max-width: 80%;
+      position: relative;
+      align-self: flex-start;
+    }
+    .chat.user {
+      background: #fff;
+      align-self: flex-end;
+    }
+    .chat.button {
+      background: #fff;
+      border: 1px solid #ccc;
+      cursor: pointer;
+      text-align: center;
+    }
+    .input-area {
+      background: #f0f0f0;
+      padding: 10px;
+      border-top: 1px solid #ccc;
+      display: flex;
+      flex-direction: column;
+    }
+    textarea {
+      width: 100%;
+      height: 100px;
+      font-size: 12px;
+      resize: none;
+    }
+    button {
+      margin-top: 5px;
+      padding: 10px 20px;
+      background: #25d366;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      width: 100%;
+    }
+    button:hover {
+      background: #1ebe5d;
+    }
+    pre {
+      background: #eee;
+      padding: 10px;
+      margin-top: 10px;
+      white-space: pre-wrap;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="phone-frame" id="phone-frame">
+    <div class="header">WhatsApp Simülatör</div>
+    <div class="chat-container" id="chat"></div>
+    <div class="input-area">
+      <textarea id="jsonInput">{
+  "entry": [
+    {
+      "changes": [
+        {
+          "value": {
+            "messages": [
+              {
+                "from": "user",
+                "type": "text",
+                "text": { "body": "yardım istiyorum" }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}</textarea>
+      <button onclick="renderChat()">Simüle Et</button>
+      <div id="serverOutput"></div>
+    </div>
+  </div>
+
+  <script>
+    const predefinedReplies = {
+      "yardım istiyorum": {
+        reply: {
+          messaging_product: "whatsapp",
+          recipient_type: "individual",
+          to: "user",
+          type: "interactive",
+          interactive: {
+            type: "button",
+            body: { text: "Size nasıl yardımcı olabilirim?" },
+            action: {
+              buttons: [
+                { type: "reply", reply: { id: "tamir_sorgula", title: "Tamir Sorgula" } },
+                { type: "reply", reply: { id: "oneride_bulun", title: "Öneride Bulun" } },
+                { type: "reply", reply: { id: "diger", title: "Diğer" } }
+              ]
+            }
+          }
+        }
+      },
+      "tamir_sorgula": {
+        reply: {
+          messaging_product: "whatsapp",
+          recipient_type: "individual",
+          to: "user",
+          type: "text",
+          text: { body: "Lütfen tamir numaranızı giriniz." }
+        }
+      },
+      "oneride_bulun": {
+        reply: {
+          messaging_product: "whatsapp",
+          recipient_type: "individual",
+          to: "user",
+          type: "text",
+          text: { body: "Önerinizi duymak isteriz! Yazabilirsiniz." }
+        }
+      },
+      "diger": {
+        reply: {
+          messaging_product: "whatsapp",
+          recipient_type: "individual",
+          to: "user",
+          type: "text",
+          text: { body: "Lütfen ne hakkında konuşmak istediğinizi belirtin." }
+        }
+      }
+    };
+
+    function renderChat() {
+  const chatEl = document.getElementById('chat');
+  chatEl.innerHTML = ''; // ESKİ MESAJLARI TEMİZLE
+
+  let json;
+  try {
+    json = JSON.parse(document.getElementById('jsonInput').value);
+  } catch (e) {
+    chatEl.innerHTML += '<p style="color:red">Geçersiz JSON</p>';
+    return;
+  }
+
+  try {
+    const messages = json.entry[0].changes[0].value.messages;
+    messages.forEach(msg => {
+      let userMessage = '';
+
+      if (msg.type === 'text') {
+        userMessage = msg.text.body;
+      } else if (msg.type === 'interactive' && msg.interactive?.type === 'button_reply') {
+        userMessage = msg.interactive.button_reply.id;
+      }
+
+      const userBubble = document.createElement('div');
+      userBubble.className = 'chat user';
+      userBubble.textContent = userMessage;
+      chatEl.appendChild(userBubble);
+
+      const replyObj = predefinedReplies[userMessage.toLowerCase()];
+
+      if (replyObj) {
+        if (replyObj.reply.type === 'text') {
+          const reply = document.createElement('div');
+          reply.className = 'chat';
+          reply.textContent = replyObj.reply.text.body;
+          chatEl.appendChild(reply);
+        } else if (replyObj.reply.type === 'interactive') {
+          const title = document.createElement('div');
+          title.className = 'chat';
+          title.textContent = replyObj.reply.interactive.body.text;
+          chatEl.appendChild(title);
+          replyObj.reply.interactive.action.buttons.forEach(btn => {
+            const btnDiv = document.createElement('div');
+            btnDiv.className = 'chat button';
+            btnDiv.textContent = btn.reply.title;
+            chatEl.appendChild(btnDiv);
+          });
+        }
+      }
+    });
+  } catch (e) {
+    chatEl.innerHTML += '<p style="color:red">WhatsApp JSON formatı hatalı</p>';
+  }
+
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
+
+
+    window.onload = renderChat;
+  </script>
+</body>
+</html>

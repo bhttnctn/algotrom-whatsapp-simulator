@@ -1,0 +1,19 @@
+{
+  "entry": [
+    {
+      "changes": [
+        {
+          "value": {
+            "messages": [
+              {
+                "from": "user",
+                "type": "text",
+                "text": { "body": "Merhaba. Yardım istiyorum" }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
